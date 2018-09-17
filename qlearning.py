@@ -39,10 +39,7 @@ class QLearning ():
         self.nbVisits = {}
         self.nbExperiences = {}
         self.QValues = {}
-        self.thetas = []
-        self.score =[]
-        self.theta = 20
-        self.q = 0.7
+        self.score = []
         self.histories = []
         
         for state in self.mdp.getStates():
@@ -107,44 +104,10 @@ class QLearning ():
             return self.getBestAction(state)
             if self.debug and not self.mdp.isFinal(state):
                 print res,"(best)"
-        if self.strategy == "epsilon-greedy-traj":
-            if self.isRandomTraj == 1:
-                self.nbEpsilons += 1
-                allActions=self.mdp.getAllowedActions(state)[:]
-                res = random.choice(allActions)
-                if self.debug and not self.mdp.isFinal(state):
-                    print res,"(exploring because of epsilon)"
-                return res
-            # Exploitation
-            self.nbExploitations += 1
-            return self.getBestAction(state)
-            if self.debug and not self.mdp.isFinal(state):
-                print res,"(best)"
-        if self.strategy == "boltzmann":
-            distribution = {action : np.exp(self.QValues[state][action]/self.temperature) for action in self.mdp.getAllowedActions(state)}
-            sumQ = sum(distribution[action] for action in self.mdp.getAllowedActions(state))
-            if(sumQ ==0 ):
-                allActions=self.mdp.getAllowedActions(state)[:]
-                res = random.choice(allActions)
-            distribution = {action : distribution[action]/sumQ for action in self.mdp.getAllowedActions(state)}
-            print distribution
-            #raw_input()
-            randomNumber = random.random()
-            mass = 0
-            for nextAction in distribution.keys():
-                probability = distribution[nextAction]
-                mass = mass+probability
-                if randomNumber <= mass:
-                    return nextAction
+        
 
     # Informs the algorithm of an experienced transition
     def inform (self, state, action, nextState):
-        if self.strategy == "epsilon-greedy-traj" and nextState == self.initialState:
-            choice = random.random()
-            if choice<self.epsilon:
-                self.isRandomTraj =1
-            else:
-                self.isRandomTraj =0
         # Debug
         if self.debug and not self.mdp.isFinal(state):
             print "Informed of next state",nextState
@@ -153,7 +116,6 @@ class QLearning ():
         reward = 0
         if self.mdp.isFinal(nextState):
             wealthLevel = self.mdp.wealthFunction(nextState)
-            reward = self.getCurrentRewardWealthLevel(wealthLevel)
             if self.isRandomTraj==0:
                 self.nbWealthObtained += 1
             self.realNbWealthObtained += 1
@@ -217,18 +179,6 @@ class QLearning ():
                 bestActions += [action]
         return random.choice(bestActions)
 
-    
-    def getCurrentRewardWealthLevel (self, wealthLevel):
-        i = self.mdp.getWealthLevels().index(wealthLevel)
-        reward = max(min(1,i-self.theta+1),0)
-        return reward
-
-    def getCumulatedCostLevel(self, cumulatedCost):
-        cumulatedCost = 2000 - cumulatedCost
-        print "cumulatedCost", cumulatedCost
-        reward = max(min(1,cumulatedCost-self.theta+1),0)
-        return reward
-
     # Handling of data structures ===================================================
     # alpha_t: update of wealth expectations
     def getAlpha (self, nbExperiences):
@@ -263,19 +213,6 @@ class QLearning ():
         if not state in self.nbExperiences.keys() or not action in self.nbExperiences[state]:
             return 0
         return self.nbExperiences[state][action]
-
-    def update_theta(self,nbExperiences):
-        state = self.initialState
-        sum_p = max(self.QValues[state][action] for action in self.mdp.getAllowedActions(state))
-        sum_p2 = sum( self.real_wealth_frequencies[wealthLevel]*self.getCurrentRewardWealthLevel(wealthLevel) for wealthLevel in self.mdp.getWealthLevels())
-        #print "sum_p1", sum_p, "q", self.q
-        #print self.getGamma(nbExperiences)*((sum_p - self.q))
-        if sum_p < self.q:
-            self.theta = self.theta - (1-self.q)*100*self.getGamma(nbExperiences)
-        else:
-            self.theta = self.theta + self.q*100*self.getGamma(nbExperiences)
-        #self.theta = self.theta + self.getGamma(nbExperiences)*100*((sum_p - self.q))# - self.getGamma(nbExperiences)*((sum_p <= self.q)) # - self.theta)
-        
 
         
     # ==================================================================================

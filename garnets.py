@@ -23,7 +23,7 @@ class GarnetsMDP (MDP):
         wealthLevels = ["w"+str(i) for i in xrange(1,21)]
         finalStates = ["s" + str(i) for i in xrange(80,100)]
         #self.real_nash_equilibrium = {"w1":1./3,"w2":1./3, "w3":1./3}
-        MDP.__init__(self,states,actions,wealthLevels,self.allowedActionsFunction,finalStates,self.wealthFunction,self.transitionFunction,self.ssbFunction,"s00","Garnets")
+        MDP.__init__(self,states,actions,wealthLevels,self.allowedActionsFunction,finalStates,self.wealthFunction,self.transitionFunction,self.ssbFunction,"s00","Garnets",50)
         self.transitionTable = {}
         self.generateTransitionTable()
 
@@ -38,11 +38,11 @@ class GarnetsMDP (MDP):
         return self.actions[1:]
 
     def wealthFunction (self, finalState):
-        return "w" + str(int(finalState[1:])-79) #78 with horizon
+        return "w" + str(int(finalState[1:])-79)
 
     def generateTransitionTable(self):
-        random.seed(10)
-        realState = self.states[:] # [:-1] with horizon
+        random.seed(8)
+        realState = self.states[:]
         for i in self.states[:-20]:
             realState = self.states[:]
             realState.remove(i)

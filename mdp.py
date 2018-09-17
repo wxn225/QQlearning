@@ -18,7 +18,7 @@ class MDP ():
     # wealthFunction: function from final state to wealthLevel
     # transitionFunction: function from state, action to dictionary (nextState,probability)
     # ssbFunction: function from wealthLevel, otherWealthLevel to number
-    def __init__ (self, states, actions, wealthLevels, allowedActionsFunction, finalStates, wealthFunction, transitionFunction, ssbFunction, initialState,mdpType):
+    def __init__ (self, states, actions, wealthLevels, allowedActionsFunction, finalStates, wealthFunction, transitionFunction, ssbFunction, initialState, mdpType, horizon):
         self.states = states
         self.actions = actions
         self.wealthLevels = wealthLevels
@@ -30,7 +30,9 @@ class MDP ():
         self.initialState = initialState
         self.mdpType = mdpType
         self.counter = 0
-        self.horizon = 50
+        #horizon defines the maximum num of actions can be taken in one history
+        self.horizon = horizon
+
 
     def getStates (self):
         return self.states

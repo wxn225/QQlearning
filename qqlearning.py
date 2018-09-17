@@ -25,11 +25,11 @@ from vectors import *
 #   current mixed policy
 # ===============================================================================================
 
-class SSBQLearning ():
+class QQLearning ():
 
     # Initial state: from which it tries to maximise reward
     # Epsilon: if random(1)<epsilon, exploration
-    def __init__ (self, mdp, initialState, epsilon):
+    def __init__ (self, mdp, initialState, epsilon, tau, theta, constant):
         self.mdp = mdp
         self.initialState = initialState
         self.epsilon = epsilon
@@ -41,8 +41,10 @@ class SSBQLearning ():
         self.QValues = {}
         self.thetas = []
         self.score  =[]
-        self.theta = 20
-        self.q = 0.7
+        self.initTheta = theta
+        self.theta = theta
+        self.q = 1 - tau
+        self.constant = constant
         self.histories = []
         
         for state in self.mdp.getStates():
@@ -73,10 +75,10 @@ class SSBQLearning ():
 
     # If several optimal actions, random choice
     def chooseAction (self, state):
-        self.mdp.counter += 1
         if self.mdp.counter == self.mdp.horizon:
             self.mdp.cumulatedCost = 0
             return "reinit"
+        self.mdp.counter += 1
         # Debug
         if self.debug and not self.mdp.isFinal(state):
             print "---------------"
@@ -187,7 +189,7 @@ class SSBQLearning ():
                 self.mdp.cumulatedCost += 1 * arrivalNum**2 / float(activeServer)
             else:
                 self.mdp.cumulatedCost += 1 * arrivalNum * (activeServer + 10*(arrivalNum-activeServer)) / float(activeServer)
-            if self.mdp.counter+1 == self.mdp.horizon:
+            if self.mdp.counter == self.mdp.horizon:
                 max_Q_next_state = 0
                 if arrivalNumNext < activeServerNext:
                     self.mdp.cumulatedCost += 1 * arrivalNumNext**2 / float(activeServerNext)
@@ -196,7 +198,7 @@ class SSBQLearning ():
                 reward = self.getCumulatedCostLevel(self.mdp.cumulatedCost)
                 self.histories.append(2000-self.mdp.cumulatedCost)
             self.QValues[state][action] = self.QValues[state][action] + self.getAlpha(self.nbExperiences[state][action])*(reward + max_Q_next_state - self.QValues[state][action])
-            if self.mdp.counter+1 == self.mdp.horizon:
+            if self.mdp.counter == self.mdp.horizon:
                 if self.isRandomTraj==0:
                     self.nbWealthObtained += 1
                 self.realNbWealthObtained += 1
@@ -283,11 +285,12 @@ class SSBQLearning ():
         sum_p2 = sum( self.real_wealth_frequencies[wealthLevel]*self.getCurrentRewardWealthLevel(wealthLevel) for wealthLevel in self.mdp.getWealthLevels())
         #print "sum_p1", sum_p, "q", self.q
         #print self.getGamma(nbExperiences)*((sum_p - self.q))
-        if sum_p < self.q:
-            self.theta = self.theta - (1-self.q)*self.getGamma(nbExperiences)*5
-        else:
-            self.theta = self.theta + self.q*self.getGamma(nbExperiences)*5
-        #self.theta = self.theta + self.getGamma(nbExperiences)*100*((sum_p - self.q)/float(abs(sum_p-self.q)))# - self.getGamma(nbExperiences)*((sum_p <= self.q)) # - self.theta)
+        if sum_p != 0:
+            if sum_p < self.q:
+                self.theta = self.theta - (1-self.q)*self.getGamma(nbExperiences)*self.constant
+            else:
+                self.theta = self.theta + self.q*self.getGamma(nbExperiences)*self.constant
+            #self.theta = self.theta + self.getGamma(nbExperiences)*100*((sum_p - self.q)/float(abs(sum_p-self.q)))# - self.getGamma(nbExperiences)*((sum_p <= self.q)) # - self.theta)
 
     # ==================================================================================
 

@@ -24,12 +24,12 @@ class DataCenterMDP (MDP):
                     ["s"+"0"+str(i)+str(j) for i in xrange(1,10) for j in xrange(10,91)] + \
                     ["s"+str(i)+"0"+str(j) for i in xrange(10,31) for j in xrange(10)] + \
                     ["s"+str(i)+str(j) for i in xrange(10,31) for j in xrange(10,91)] + ["s0"]
-        actions = ["reinit"] + ["A"+ "0" +str(i) for i in xrange(1,10)] + ["A"+str(i) for i in xrange(10,31)]# + ["stop"]
-        wealthLevels = ["w"+str(i) for i in xrange(1,21)]  # xrange(1,22) with horizons
+        actions = ["reinit"] + ["A"+ "0" +str(i) for i in xrange(1,10)] + ["A"+str(i) for i in xrange(10,31)]
+        wealthLevels = []
         finalStates = ["s0"]
         random.seed(10)
         #self.real_nash_equilibrium = {"w1":1./3,"w2":1./3, "w3":1./3}
-        MDP.__init__(self,states,actions,wealthLevels,self.allowedActionsFunction,finalStates,self.wealthFunction,self.transitionFunction,self.ssbFunction,random.choice(states[:-1]),"DataCenter")
+        MDP.__init__(self,states,actions,wealthLevels,self.allowedActionsFunction,finalStates,self.wealthFunction,self.transitionFunction,self.ssbFunction,random.choice(states[:-1]),"DataCenter",5)
         self.transitionTable = {}
         self.generateTransitionTable()
 
@@ -37,12 +37,9 @@ class DataCenterMDP (MDP):
         return self.actions[1:]
 
     def wealthFunction (self, finalState):
-        #if finalState == "s0":
-        #   return "w1"
-        return "w" + str(int(finalState[1:])-79) #78 with horizon
+        pass
 
     def generateTransitionTable(self):
-        #realState = self.states # [:-1] with horizon
         for i in self.states[:-1]:
             self.transitionTable[i] = {}
             for j in self.actions[1:]:
