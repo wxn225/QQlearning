@@ -12,9 +12,6 @@
 
 import sys
 
-from gardner import *
-from million import *
-from grid import *
 from garnets import *
 from datacenter import *
 from qqlearning import *
@@ -26,54 +23,54 @@ import matplotlib.pyplot as plt
 # Main functions ===========================================================
 
 def printUsageAndExit ():
-    print "Usage: nbSimulationSteps step epsilon <sequential>"
-    print "Observation function is called after every step-th simulation step (and after the last one)"
-    print "Exploration probability epsilon must be in [0,1]"
-    print "If last argument is not given, nonsequential Gardner's dice are played"
+    print "Total step: nbSimulationSteps step epsilon <sequential>"
+    print "Middle results every n step: Observation function is called after every step-th simulation step (and after the last one)"
+    print "epsilon: Exploration probability epsilon must be in [0,1]"
+    print "mdpType"
+    print "tau: should be in [0,1]"
+    print "optional: input <compare> to compare the performance of standard Q and QQ learning"
     sys.exit(1)
 
 def plotResults(agent, nbSteps, step):
-    print '--------------------------------------'
-    print 'Here is the vector of wealth frequancies when exploiting: '
-    print  agent.wealth_frequencies
-    print '--------------------------------------'
-    
-    print '--------------------------------------'
-    print 'Here is the vector of wealth frequancies when exploiting and exploring: '
-    print agent.real_wealth_frequencies
-    print '--------------------------------------'
-    
-    if not agent.mdp.mdpType == "DataCenter" and not agent.mdp.mdpType == "Garnets":
-        n =  agent.mdp.getWealthLevels()
-        for w in n:
-            print agent.getCurrentRewardWealthLevel(w)
-        print sum(agent.getCurrentRewardWealthLevel(w)*agent.real_wealth_frequencies[w] for w in n)
-          
+    for i in agent:
+        print '--------------------------------------'
+        print 'Here is the vector of wealth frequancies when exploiting and exploring: '
+        print i.real_wealth_frequencies
+        print '--------------------------------------'
+        
+        if not i.mdp.mdpType == "DataCenter" and not i.mdp.mdpType == "Garnets":
+            n =  i.mdp.getWealthLevels()
+            for w in n:
+                print i.getCurrentRewardWealthLevel(w)
+            print sum(i.getCurrentRewardWealthLevel(w)*i.real_wealth_frequencies[w] for w in n)
+              
+            plt.figure()
+            #nbSteps = 20000000
+            #step = 1000
+            np.save("brv.npy", i.bestResponseValue)
+            plt.plot(range(0,nbSteps,step),i.bestResponseValue)
+            plt.ylabel(ur"$V^*_{\theta}(s_0)$")
+            plt.xlabel('learning steps')
+
+        #plt.figure()
+        #plt.plot(agent.bestResponseValue)
+
         plt.figure()
-        #nbSteps = 20000000
-        #step = 1000
-        np.save("brv.npy", agent.bestResponseValue)
-        plt.plot(range(0,nbSteps,step),agent.bestResponseValue)
-        plt.ylabel(ur"$V^*_{\theta}(s_0)$")
+        plt.title(str(i.initTheta)+" "+str(i.constant))
+        np.save(str(agent.index(i))+"Score.npy", i.score)
+        plt.plot(range(0,nbSteps,step),i.score)
+        plt.ylabel('maxQ')
         plt.xlabel('learning steps')
-
-    #plt.figure()
-    #plt.plot(agent.bestResponseValue)
-
-    plt.figure()
-    np.save("agentScore.npy", agent.score)
-    plt.plot(range(0,nbSteps,step),agent.score)
-    plt.ylabel('score')
-    plt.xlabel('learning steps')
-    plt.xlim((-20000,nbSteps))
-    
-    plt.figure()
-    np.save("agentTheta.npy", agent.theta)
-    plt.plot(agent.thetas)
-    plt.ylabel(ur"$\theta$")
-    plt.xlabel('learning steps')
-    plt.xlim((-20000,nbSteps))
-    plt.ylim((11,21))
+        plt.xlim((-20000,nbSteps))
+        
+        plt.figure()
+        plt.title(str(i.initTheta)+" "+str(i.constant))
+        np.save(str(agent.index(i))+"Theta.npy", i.theta)
+        plt.plot(i.thetas)
+        plt.ylabel(ur"$\theta$")
+        plt.xlabel('learning steps')
+        plt.xlim((-20000,nbSteps))
+        #plt.ylim((11,21))
 
     
     plt.show()
@@ -112,8 +109,33 @@ def plotResultsQ(agent,agentQ):
     plt.ylim((0,1.1))
     plt.show()
 
+#change the coefficient here
+def produceAgent(mdp, initialState, epsilon, tau):
+    #garnets theta:20 constant:5
+    #datacenter theta:550 constant:100
+    theta = [480]
+    constant = [50]
+    agent = []
+    agentQ = []
+    test = "theta"
+    if test == "theta":
+        for i in theta:
+            agent.append(QQLearning(mdp,mdp.initialState,epsilon,tau,i,constant[0]))
+    elif test == "const":
+        for i in constant:
+             agent.append(QQLearning(mdp,mdp.initialState,epsilon,tau,theta[0],i))
+    else:
+        agent.append(QQLearning(mdp,mdp.initialState,epsilon,tau,theta[0],constant[0]))
+        agentQ.append(QLearning(mdp,mdp.initialState,epsilon))
+
+    return agent, agentQ
+
+
 # Called when all arguments have been retrieved and variables initialised
-def main (mdp, agent, agentQ, epsilon, initialState, nbSteps, observationFunctions):
+def main (mdp, epsilon, initialState, nbSteps, observationFunctions, tau, compare):
+
+    agent,agentQ = produceAgent(mdp,mdp.initialState,epsilon,tau)
+
     print "Running simulation..."
     print "* problem:", mdp
     print "* agent:", agent
@@ -122,21 +144,23 @@ def main (mdp, agent, agentQ, epsilon, initialState, nbSteps, observationFunctio
     print "* number of steps:", nbSteps
     if observationFunctions!=[]:
         print ""
-    trace = simulate(mdp,agent,initialState,nbSteps,step,observationFunctions)
-    #simulate(mdp,agentQ,initialState,nbSteps,step,observationFunctions)
-    if observationFunctions!=[]:
-        print ""
+    
+    for i in agent:
+        simulate(mdp,i,initialState,nbSteps,step,observationFunctions)
+    if compare:
+        simulate(mdp,agentQ[0],initialState,nbSteps,step,observationFunctions)
+
     print "Simulation: done."
     #printStats(mdp,trace)
 
-    plotResults(agent, nbSteps, step)
     #plotResults(agentQ, nbSteps, step)
-    #plotResultsQ(agent,agentQ)
+    if compare:
+        plotResultsQ(agent,agentQ)
+    else:
+        plotResults(agent, nbSteps, step)
 
 # Handling program arguments =================================================
 
-if len(sys.argv)!=4 and len(sys.argv)!=5:
-    printUsageAndExit()
 
 # Retrieving number of steps
 
@@ -165,43 +189,31 @@ if epsilon<0 or epsilon>1:
 
 mdp = None
 observationFunctions = []
+compare = False
+tau = 0
 
-if len(sys.argv)==5:
-    if sys.argv[4]=="sequential":
-        mdp = SequentialGardnerDiceMDP()   
-        #observationFunctions.append(observeSequentialGardner) # optional
-        #observationFunctions.append(observeReturnSequentialGardner) # optional
-        #observationFunctions.append(observeBRReturnSequentialGardner) # optional
-        #observationFunctions.append(observePolicySequentialGardner) # optional
-        #observationFunctions.append(observeExplorationExploitation) # optional
-        #observationFunctions.append(observeWealthExpectations) # optional
-        #observationFunctions.append(observeVisitsAndExperiences) # optional
-    elif sys.argv[4]=="million":
-        mdp = MillionMDP() 
-    elif sys.argv[4]=="grid":
-        mdp = GridMDP() 
-    elif sys.argv[4]=="garnets":
-        mdp = GarnetsMDP()
-    elif sys.argv[4]=="datacenter":
-        mdp = DataCenterMDP()
-    else:
-        printUsageAndExit()
+try:
+    tau = float(sys.argv[5])
+except ValueError:
+    printUsageAndExit()
+if tau<0 or tau>1:
+    printUsageAndExit()
+
+#Add model here
+if sys.argv[4]=="garnets":
+       mdp = GarnetsMDP()
+elif sys.argv[4]=="datacenter":
+    mdp = DataCenterMDP()
 else:
-    mdp = GardnerDiceMDP()
-    #observationFunctions.append(observeGardner) # optional
-    #observationFunctions.append(observeExplorationExploitation) # optional
-    #observationFunctions.append(observeWealthExpectations) # optional
-    #observationFunctions.append(observeVisitsAndExperiences) # optional
+    printUsageAndExit()
 
-# Choosing agent =============================================================
-
-#agent = RandomAgent(mdp) # one of this... (then comment out all observation functions)
-agent = SSBQLearning(mdp,mdp.initialState,epsilon) # ... or that
-agentQ = QLearning(mdp,mdp.initialState,epsilon)
+if len(sys.argv) > 6:
+    if sys.argv[6] == "compare":
+        compare = True
 
 # Simulating ==================================================================
 
-main(mdp,agent,agentQ,epsilon,mdp.initialState,nbSteps,observationFunctions)
+main(mdp,epsilon,mdp.initialState,nbSteps,observationFunctions,tau,compare)
 
 
 
